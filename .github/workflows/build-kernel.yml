@@ -5,7 +5,7 @@ on:
 
 jobs:
   build-kernel:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 180
     
     steps:
@@ -21,10 +21,20 @@ jobs:
         ref: main
         path: armbian-build
         
-    - name: Install dependencies
+    - name: Install dependencies and fix issues
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential git dialog curl
+        # Fix Node.js deprecation
+        echo "ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true" >> $GITHUB_ENV
+        # Fix binfmts issues
+        sudo update-binfmts --enable qemu-aarch64 || true
+        sudo update-binfmts --enable qemu-riscv64 || true
+        sudo update-binfmts --enable qemu-arm || true
+        # Create missing directories
+        sudo mkdir -p /home/runner/work/ARMNAS/ARMNAS/armbian-build/userpatches/extensions || true
+        # Install software-properties-common for trixie
+        sudo apt-get install -y software-properties-common || true
         
     - name: Copy custom kernel config
       run: |
