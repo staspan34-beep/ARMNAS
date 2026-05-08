@@ -1,4 +1,4 @@
-name: Build RK3566 Kernel with USB 3.0, ZFS, NPU
+name: Build RK3566 BOX DEMO Kernel with USB 3.0, ZFS, NPU
 
 on:
   workflow_dispatch:
@@ -46,7 +46,7 @@ jobs:
         ./compile.sh \
           KERNEL_ONLY=yes \
           KERNEL_CONFIGURE=yes \
-          BOARD=orangepi3b \
+          BOARD=rk3566-box-demo \
           BRANCH=edge \
           RELEASE=trixie \
           BUILD_DESKTOP=no \
