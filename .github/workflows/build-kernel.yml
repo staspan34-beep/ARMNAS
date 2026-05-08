@@ -1,0 +1,73 @@
+name: Build RK3566 Kernel with USB 3.0, ZFS, NPU
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-kernel:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    
+    steps:
+    - name: Checkout this repository
+      uses: actions/checkout@v4
+      with:
+        path: armnas-repo
+        
+    - name: Checkout Armbian build repository
+      uses: actions/checkout@v4
+      with:
+        repository: armbian/build
+        ref: main
+        path: armbian-build
+        
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential git dialog curl
+        
+    - name: Copy custom kernel config
+      run: |
+        mkdir -p armbian-build/config/kernel
+        cp armnas-repo/armbian_config.txt armbian-build/config/kernel/linux-rockchip64-current.config
+        
+    - name: Add ZFS and USB 3.0 patches to config
+      run: |
+        cd armbian-build/config/kernel
+        echo "CONFIG_ZFS=y" >> linux-rockchip64-current.config
+        echo "CONFIG_USB_DWC3_HOST=y" >> linux-rockchip64-current.config
+        echo "CONFIG_USB_XHCI_HCD=y" >> linux-rockchip64-current.config
+        echo "CONFIG_USB_XHCI_PLATFORM=y" >> linux-rockchip64-current.config
+        echo "CONFIG_RKNPU=y" >> linux-rockchip64-current.config
+        
+    - name: Build kernel for RK3566
+      run: |
+        cd armbian-build
+        ./compile.sh \
+          KERNEL_ONLY=yes \
+          KERNEL_CONFIGURE=yes \
+          BOARD=orangepi3b \
+          BRANCH=edge \
+          RELEASE=trixie \
+          BUILD_DESKTOP=no \
+          BUILD_MINIMAL=no \
+          KERNEL_CONFIGURE=yes \
+          2>&1 | tee build.log
+      timeout-minutes: 150
+      
+    - name: Upload kernel artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: rk3566-kernel-usb3-zfs-npu
+        path: |
+          output/debs/linux-image*.deb
+          output/debs/linux-headers*.deb
+          output/debs/linux-dtb*.deb
+        retention-days: 30
+        
+    - name: Upload build log
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-log
+        path: build.log
+        retention-days: 7
